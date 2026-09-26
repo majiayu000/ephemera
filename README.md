@@ -15,10 +15,6 @@ A collection of browser animations generated entirely by code. No images, no aud
 | **Stardust** · 百万星尘 | `stardust.html` | WebGL2, 1,048,576 GPU particles | Click to morph, drag to rotate, hover to repel |
 | **Neon Drive** · 霓虹夜驰 | `neon-drive.html` | WebGL2, Web Audio step sequencer | Click to start; visuals pulse with the drums |
 
-## Recording
-
-A one-minute excerpt of Ink Drop: [`ink-drop-video/一滴墨-1分钟.mp4`](ink-drop-video/一滴墨-1分钟.mp4)
-
 ## Run
 
 Every piece except **Ink Drop** opens directly by double-clicking its HTML file.

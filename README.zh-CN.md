@@ -12,10 +12,6 @@
 | 百万星尘 | `stardust.html` | WebGL2 GPU 粒子（1,048,576 颗） | 点击变形，拖动旋转，鼠标推开粒子 |
 | 霓虹夜驰 | `neon-drive.html` + `neon-drive-music.js` | WebGL2、Web Audio 音序器 | 点击启动，画面随鼓点同步 |
 
-## 录屏
-
-《一滴墨》1 分钟片段：[`ink-drop-video/一滴墨-1分钟.mp4`](ink-drop-video/一滴墨-1分钟.mp4)
-
 ## 运行
 
 除「一滴墨」外，其余作品都可以直接双击 HTML 打开。
