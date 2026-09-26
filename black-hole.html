@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>事件视界</title>
+<style>
+html,body{margin:0;height:100%;background:#000;overflow:hidden;cursor:grab;touch-action:none}
+body:active{cursor:grabbing}
+canvas{display:block}
+#t{position:fixed;left:0;right:0;bottom:18px;text-align:center;color:#c9b8a0;font:12px "PingFang SC",sans-serif;letter-spacing:.4em;opacity:.6;pointer-events:none}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="t">事 件 视 界 · 拖动环绕 · 滚轮缩放</div>
+<script src="shared/glkit.js"></script>
+<script>
+// 光线追踪史瓦西黑洞：每条光线按光子测地线近似积分 a = -1.5·h²·r/|r|⁵（单位：史瓦西半径 = 1）
+// 穿过赤道面时累加吸积盘辐射：开普勒转速、多普勒增亮与蓝移、内热外冷
+const FS = `#version 300 es
+precision highp float;
+uniform vec2 R; uniform float T; uniform vec2 M; uniform float D;
+out vec4 o;
+float h21(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
+float n2(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
+  return mix(mix(h21(i),h21(i+vec2(1,0)),f.x),mix(h21(i+vec2(0,1)),h21(i+1.),f.x),f.y);}
+float fbm(vec2 p){float s=0.,a=.5;for(int i=0;i<5;i++){s+=a*n2(p);p=p*2.03+vec2(1.7,9.2);a*=.5;}return s;}
+
+vec3 sky(vec3 d){
+  vec3 c=vec3(0);
+  for(float s=0.;s<3.;s++){
+    vec3 q=d*(90.+s*70.), id=floor(q), f=fract(q)-.5;
+    float h=fract(sin(dot(id,vec3(12.9,78.2,37.7)))*43758.5);
+    if(h>.975) c+=smoothstep(.2,0.,length(f))*mix(vec3(1.,.75,.55),vec3(.6,.8,1.),fract(h*37.))*(h-.975)*70.;
+  }
+  float n=fbm(d.xy*2.2+d.z*1.3);
+  c+=vec3(.35,.12,.5)*pow(n,3.5)*.9+vec3(.05,.15,.3)*pow(fbm(d.yz*3.+4.),4.)*1.2;
+  return c;
+}
+
+void main(){
+  vec2 uv=(gl_FragCoord.xy-.5*R)/R.y;
+  float yaw=T*.03+M.x*3.14, pit=clamp(.12-M.y*2.,-1.45,1.45);
+  vec3 ro=D*vec3(cos(pit)*sin(yaw),sin(pit),cos(pit)*cos(yaw));
+  vec3 fw=normalize(-ro), rt=normalize(cross(vec3(0,1,0),fw)), up=cross(fw,rt);
+  vec3 p=ro, v=normalize(fw*1.5+uv.x*rt+uv.y*up);
+  vec3 hv=cross(p,v); float h2=dot(hv,hv);
+  vec3 col=vec3(0); float tr=1.; bool hole=false;
+  for(int i=0;i<320;i++){
+    float r=length(p);
+    if(r<1.){hole=true;break;}
+    if(r>D*1.6) break;
+    float dt=clamp(.07*r,.015,1.);
+    vec3 pp=p;
+    v+=-1.5*h2*p/pow(r,5.)*dt;
+    p+=v*dt;
+    if(pp.y*p.y<0.){
+      vec3 c=mix(pp,p,pp.y/(pp.y-p.y));
+      float rr=length(c.xz);
+      if(rr>2.6&&rr<14.){
+        float w=pow(rr,-1.5), a=atan(c.z,c.x)+T*w*3.;
+        float den=fbm(vec2(a*2.5,rr*1.3-T*.1))*smoothstep(2.6,3.4,rr)*smoothstep(14.,8.,rr);
+        den=pow(den,1.8)*2.6;
+        vec3 vel=normalize(vec3(-c.z,0,c.x))*min(.6,sqrt(.5/(rr-1.)));
+        float dop=1./(1.-dot(vel,-normalize(v)));
+        float heat=smoothstep(10.,2.8,rr);
+        vec3 tint=mix(vec3(1.,.32,.06),vec3(1.,.85,.6),heat);
+        tint=mix(tint,vec3(.55,.7,1.),clamp(dop-1.,0.,1.)*.6);
+        col+=tr*den*tint*pow(dop,3.)*(4./rr)*1.6;
+        tr*=1.-clamp(den*.8,0.,.92);
+      }
+    }
+  }
+  if(!hole) col+=tr*sky(normalize(v));
+  col=1.-exp(-col*1.15);
+  col=pow(col,vec3(.4545));
+  col*=1.-.35*dot(uv,uv);
+  o=vec4(col,1);
+}`;
+
+const cv = document.getElementById('c');
+const gl = glkit.context(cv, .75);
+const prog = glkit.program(gl, glkit.FULLSCREEN_VS, FS);
+const U = glkit.uniforms(gl, prog, ['R', 'T', 'M', 'D']);
+const drag = glkit.drag(cv);
+let dist = 26, distT = 26;
+addEventListener('wheel', e => { distT = Math.min(60, Math.max(9, distT * (1 + e.deltaY * .001))); }, { passive: true });
+
+function frame(now) {
+  requestAnimationFrame(frame);
+  drag.step();
+  dist += (distT - dist) * .08;
+  gl.uniform2f(U.R, cv.width, cv.height);
+  gl.uniform1f(U.T, now / 1000);
+  gl.uniform2f(U.M, drag.x, drag.y);
+  gl.uniform1f(U.D, dist);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

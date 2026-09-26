@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Comic · 代码动画集</title>
+<style>
+html,body{margin:0;min-height:100%;background:#08070c;color:#e8e2d6;font-family:"PingFang SC",sans-serif}
+main{max-width:1080px;margin:0 auto;padding:64px 24px}
+h1{font-weight:300;letter-spacing:.5em;margin:0 0 8px}
+.sub{opacity:.5;letter-spacing:.2em;font-size:13px;margin-bottom:48px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px}
+a.card{display:block;text-decoration:none;color:inherit;border-radius:14px;overflow:hidden;background:#13111a;border:1px solid #221f2c;transition:transform .25s,border-color .25s}
+a.card:hover{transform:translateY(-4px);border-color:#4a4460}
+.cover{height:150px;display:flex;align-items:center;justify-content:center;font-size:30px;letter-spacing:.4em;text-indent:.4em}
+.body{padding:16px 18px 20px}
+.body h2{margin:0 0 8px;font-size:17px;font-weight:500;letter-spacing:.15em}
+.body p{margin:0 0 12px;font-size:13px;line-height:1.7;opacity:.72}
+.tags span{display:inline-block;font-size:11px;padding:2px 8px;margin:0 6px 6px 0;border-radius:99px;background:#221f2c;opacity:.85}
+.note{font-size:12px;color:#d9a94f;margin-top:8px}
+</style>
+</head>
+<body>
+<main>
+  <h1>COMIC</h1>
+  <div class="sub">代码动画集 · 无图片素材 · 全部实时生成</div>
+  <div class="grid">
+    <a class="card" href="ink-drop/index.html">
+      <div class="cover" style="background:#efe8d8;color:#1a191c;font-family:'STKaiti','Kaiti SC',serif">一滴墨</div>
+      <div class="body">
+        <h2>一滴墨</h2>
+        <p>约三分钟的六幕水墨短片：墨滴化鱼，鱼跃成鹤，鹤散为云，云落成雨，雨汇成江，最后写成一首诗回到砚台。</p>
+        <div class="tags"><span>Canvas 2D</span><span>Web Audio</span><span>ES 模块</span></div>
+        <div class="note">需要本地 http 服务才能打开，见 README</div>
+      </div>
+    </a>
+    <a class="card" href="moon-loom.html">
+      <div class="cover" style="background:linear-gradient(#0a0926,#3e2468 60%,#1e2256);color:#f3e3b5">月下织机</div>
+      <div class="body">
+        <h2>月下织机</h2>
+        <p>梭子一行行织出月下海面，织完拆散成星尘。划过经线可以拨弦，还没织的那段越短，音越高。</p>
+        <div class="tags"><span>Canvas 2D</span><span>Karplus-Strong</span></div>
+      </div>
+    </a>
+    <a class="card" href="black-hole.html">
+      <div class="cover" style="background:radial-gradient(circle,#000 22%,#f0a860 30%,#3a1d10 46%,#05040a 70%);color:#fff">事件视界</div>
+      <div class="body">
+        <h2>事件视界</h2>
+        <p>光线追踪的黑洞：吸积盘被引力弯折到黑洞上下方，朝向你的一侧更亮偏蓝。拖动环绕，滚轮缩放。</p>
+        <div class="tags"><span>WebGL2</span><span>光线步进</span></div>
+      </div>
+    </a>
+    <a class="card" href="stardust.html">
+      <div class="cover" style="background:radial-gradient(ellipse at center,#fff3d0 0%,#5a4bd8 18%,#1b6f8a 38%,#050510 65%);color:#fff">百万星尘</div>
+      <div class="body">
+        <h2>百万星尘</h2>
+        <p>1,048,576 颗粒子在星系、球体、三叶结和文字之间旋涡式变形。点击切换形状，鼠标靠近会推开粒子。</p>
+        <div class="tags"><span>WebGL2</span><span>GPU 粒子</span></div>
+      </div>
+    </a>
+    <a class="card" href="neon-drive.html">
+      <div class="cover" style="background:linear-gradient(#050010,#d8207a 55%,#0a0015 56%);color:#8fe9ff;text-shadow:0 0 12px #29c8ff">霓虹夜驰</div>
+      <div class="body">
+        <h2>霓虹夜驰</h2>
+        <p>合成器浪潮风格的落日与霓虹网格，配乐实时编曲，鼓组进入时画面随鼓点闪光、震动、色散。</p>
+        <div class="tags"><span>WebGL2</span><span>Web Audio 音序器</span></div>
+      </div>
+    </a>
+  </div>
+</main>
+</body>
+</html>

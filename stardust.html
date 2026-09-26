@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>百万星尘</title>
+<style>
+html,body{margin:0;height:100%;background:#000;overflow:hidden;cursor:pointer;touch-action:none}
+canvas{display:block}
+#t{position:fixed;left:0;right:0;bottom:18px;text-align:center;color:#9fb0d0;font:12px "PingFang SC",sans-serif;letter-spacing:.4em;opacity:.6;pointer-events:none}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="t">百 万 星 尘 · <span id="n"></span> 颗粒子 · 点击变形 · 拖动旋转</div>
+<script src="shared/glkit.js"></script>
+<script>
+// 无顶点属性：每颗粒子用 gl_VertexID 在着色器里算出两种形状的位置，再按各自的错峰进度爆散、重聚
+const N = 1 << 20, TEXT = '炫酷', SHAPES = 4, HOLD = 6.5, MORPH = 3.2;
+
+const VS = `#version 300 es
+precision highp float;
+uniform float T, K, SA, SB, ASP; uniform vec2 M, ROT; uniform sampler2D TX;
+out vec3 vc; out float va;
+float h(uint x){x^=x>>16;x*=0x7feb352dU;x^=x>>15;x*=0x846ca68bU;x^=x>>16;return float(x)/4294967295.;}
+vec3 pal(float t){return .55+.45*cos(6.2832*(t+vec3(0.,.33,.67)));}
+vec3 shape(float s,int id,float u,float v,float w,float z){
+  if(s<.5){                       // 四臂旋涡星系 + 明亮星系核
+    if(z<.16){float r=.38*pow(w,1.6), a=u*6.2832; return vec3(cos(a)*r,(v-.5)*.28*(.4-r),sin(a)*r);}
+    float r=pow(u,.55)*1.5, a=floor(w*4.)*1.5708+r*3.4+(v-.5)*.7/(r+.25);
+    return vec3(cos(a)*r,(z-.5)*.1*(1.6-r),sin(a)*r);
+  }
+  if(s<1.5){                      // 带经纬光带的球
+    float y=u*2.-1., a=v*6.2832, rr=sqrt(1.-y*y), band=.03*sin(y*40.+a*3.);
+    return vec3(cos(a)*rr,y,sin(a)*rr)*(1.05+band);
+  }
+  if(s<2.5){                      // 三叶结
+    float t=u*6.2832, r=.62+.28*cos(3.*t), a=v*6.2832;
+    return vec3(r*cos(2.*t),.35*sin(3.*t),r*sin(2.*t))+.07*sqrt(w)*vec3(cos(a),sin(a),cos(a+2.1));
+  }
+  ivec2 ts=textureSize(TX,0);   // 文字
+  return texelFetch(TX,ivec2(id%ts.x,id/ts.x),0).xyz;
+}
+mat3 rotY(float a){float c=cos(a),s=sin(a);return mat3(c,0,-s,0,1,0,s,0,c);}
+mat3 rotX(float a){float c=cos(a),s=sin(a);return mat3(1,0,0,0,c,s,0,-s,c);}
+void main(){
+  int id=gl_VertexID; uint k=uint(id)*8u;
+  float u=h(k), v=h(k+1u), w=h(k+2u), z=h(k+3u);
+  float e=smoothstep(0.,1.,clamp(K*1.7-w*.7,0.,1.));
+  vec3 a=shape(SA,id,u,v,w,z), b=shape(SB,id,u,v,w,z);
+  vec3 dir=normalize(vec3(h(k+4u),h(k+5u),h(k+6u))-.5);
+  float sw=sin(3.1416*e);
+  vec3 p=rotY(sw*(2.5+w*3.))*mix(a,b,e)*(1.+sw*.35)+dir*sw*(.12+w*.3);
+  p+=.015*vec3(sin(T*1.3+u*60.),cos(T*1.1+v*60.),sin(T*.9+w*60.));
+  float spin=(SB>2.5&&e>.5)?.25*sin(T*.4):T*.12;
+  p=rotX(ROT.y+.35*(1.-step(2.5,SB)*e))*rotY(spin+ROT.x)*p;
+  vec3 q=p; q.z-=3.2;
+  vec4 clip=vec4(q.x*1.9/ASP,q.y*1.9,0.,-q.z);
+  vec2 sp=clip.xy/clip.w, d=sp-M; float md=length(d*vec2(ASP,1.));
+  sp+=normalize(d+1e-5)*.12*exp(-md*md*40.);
+  gl_Position=vec4(sp*clip.w,0.,clip.w);
+  gl_PointSize=clamp(3.6/-q.z,1.,3.);
+  vec3 m=mix(a,b,e);
+  vc=mix(pal(u*.35+T*.03+(SB+e)*.17),vec3(1.,.82,.55),exp(-dot(m,m)*9.))*(1.+.8*exp(-md*md*30.));
+  va=.4+.3*sin(3.1416*e);
+}`;
+
+const FS = `#version 300 es
+precision highp float;
+in vec3 vc; in float va; out vec4 o;
+void main(){
+  float d=length(gl_PointCoord-.5), a=va*smoothstep(.5,0.,d);
+  o=vec4(vc*a,1.);
+}`;
+
+// 把文字画进 2D 画布，采样出像素位置，作为每颗粒子的“文字形状”坐标
+function textTexture(gl) {
+  const cw = 900, ch = 360, c = document.createElement('canvas');
+  c.width = cw; c.height = ch;
+  const x = c.getContext('2d');
+  x.fillStyle = '#fff';
+  x.font = `900 ${ch * .78}px "PingFang SC","Heiti SC",sans-serif`;
+  x.textAlign = 'center';
+  x.textBaseline = 'middle';
+  x.fillText(TEXT, cw / 2, ch / 2);
+  const img = x.getImageData(0, 0, cw, ch).data, pts = [];
+  for (let py = 0; py < ch; py += 2) for (let px = 0; px < cw; px += 2) if (img[(py * cw + px) * 4 + 3] > 128) pts.push(px, py);
+  if (!pts.length) glkit.fail('文字采样为空：系统缺少可用字体');
+  const W = 1024, data = new Float32Array(N * 4), s = 2.6 / cw;
+  for (let i = 0; i < N; i++) {
+    const k = (Math.random() * pts.length / 2 | 0) * 2;
+    data[i * 4] = (pts[k] + Math.random() * 2 - cw / 2) * s;
+    data[i * 4 + 1] = -(pts[k + 1] + Math.random() * 2 - ch / 2) * s;
+    data[i * 4 + 2] = (Math.random() - .5) * .06;
+  }
+  const tex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, W, N / W, 0, gl.RGBA, gl.FLOAT, data);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  return tex;
+}
+
+const cv = document.getElementById('c');
+document.getElementById('n').textContent = N.toLocaleString();
+const gl = glkit.context(cv, 1);
+const prog = glkit.program(gl, VS, FS);
+const U = glkit.uniforms(gl, prog, ['T', 'K', 'SA', 'SB', 'ASP', 'M', 'ROT', 'TX']);
+textTexture(gl);
+gl.uniform1i(U.TX, 0);
+gl.enable(gl.BLEND);
+gl.blendFunc(gl.ONE, gl.ONE);
+const drag = glkit.drag(cv);
+let from = 0, to = 0, t0 = -MORPH, mouse = [9, 9], moved = 0, downAt = null;
+
+const next = now => { from = to; to = (to + 1) % SHAPES; t0 = now; };
+cv.addEventListener('pointerdown', e => { downAt = [e.clientX, e.clientY]; });
+cv.addEventListener('pointerup', e => {
+  if (downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) < 5) next(performance.now() / 1000);
+  downAt = null;
+});
+addEventListener('pointermove', e => { mouse = [e.clientX / innerWidth * 2 - 1, 1 - e.clientY / innerHeight * 2]; moved = performance.now(); });
+
+function frame(ms) {
+  requestAnimationFrame(frame);
+  const now = ms / 1000;
+  if (now - t0 > MORPH + HOLD) next(now);
+  drag.step();
+  const m = ms - moved < 2500 ? mouse : [9, 9];
+  gl.clearColor(0, 0, 0, 1);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.uniform1f(U.T, now);
+  gl.uniform1f(U.K, Math.min(1, (now - t0) / MORPH));
+  gl.uniform1f(U.SA, from);
+  gl.uniform1f(U.SB, to);
+  gl.uniform1f(U.ASP, cv.width / cv.height);
+  gl.uniform2f(U.M, m[0], m[1]);
+  gl.uniform2f(U.ROT, drag.x * 4, drag.y * 3);
+  gl.drawArrays(gl.POINTS, 0, N);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>月下织机</title>
+<style>
+html,body{margin:0;height:100%;background:#07060d;overflow:hidden;cursor:crosshair;touch-action:none}
+canvas{display:block}
+#title{position:fixed;top:22px;left:0;right:0;text-align:center;color:#e9dfb8;font:300 15px "Songti SC",serif;letter-spacing:.8em;opacity:.8;pointer-events:none}
+#hint{position:fixed;left:0;right:0;bottom:16px;text-align:center;color:#b9b3d6;font:12px/1.6 "PingFang SC",sans-serif;letter-spacing:.25em;opacity:.7;transition:opacity 2s;pointer-events:none}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="title">月 下 织 机</div>
+<div id="hint">划过经线拨弦 · 按住加速织造 · 首次点击开启声音</div>
+<script>
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const hint = document.getElementById('hint');
+const PENTA = [0, 2, 4, 7, 9];
+let W, H, DPR, N, GAP, TOP, BOT, ROWH, ROWS, LEFT, warps, stars, wov, wctx;
+let state, t0, k, c, beat, particles, boost = false, AC = null, master, lastTock = 0;
+
+const rand = (a, b) => a + Math.random() * (b - a);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+const rgb = (c, a = 1) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
+const hash = (x, y) => { const s = Math.sin(x * 127.1 + y * 311.7) * 43758.5453; return s - Math.floor(s); };
+
+// 挂毯图案：夜空 + 月亮 + 远山 + 海面倒影
+function pattern(i, r) {
+  const u = (i + .5) / N, v = (r + .5) / ROWS, aw = N * GAP, ah = ROWS * ROWH, HZ = .64;
+  let col;
+  if (v < HZ) {
+    const s = v / HZ;
+    col = mix([10, 9, 38], [62, 36, 104], s * s);
+    col = mix(col, [168, 86, 118], Math.max(0, (s - .75) / .25) ** 2 * .8);
+    const dx = (u - .7) * aw, dy = (v - .27) * ah, d = Math.hypot(dx, dy), R = Math.min(aw, ah) * .12;
+    if (d < R) col = mix([252, 240, 200], [205, 188, 150], Math.max(0, Math.sin(dx * .08 + 1) * Math.sin(dy * .09)) * .9);
+    else {
+      const g = Math.max(0, 1 - (d - R) / (R * 2.2));
+      col = mix(col, [230, 190, 150], g * g * .55);
+      if (hash(i, r) > .982 && v < .5) col = mix([235, 235, 255], col, hash(r, i) * .4);
+    }
+    const m2 = .5 + .03 * Math.sin(u * 5 + 3) + .015 * Math.sin(u * 17);
+    if (v > m2) col = mix(col, [48, 32, 82], .85);
+    const m = .56 + .035 * Math.sin(u * 8 + 1) + .02 * Math.sin(u * 21) + .012 * Math.sin(u * 47);
+    if (v > m) col = mix([18, 14, 36], [30, 22, 52], (v - m) / (HZ - m));
+  } else {
+    const s = (v - HZ) / (1 - HZ);
+    col = mix([30, 34, 86], [6, 10, 32], s);
+    const w = Math.sin(u * (26 + s * 10) + s * s * 60 + Math.sin(u * 9 + s * 14) * 1.6);
+    if (w > .8) col = mix(col, [70, 90, 160], (w - .8) * 3.5 * (1 - s * .5));
+    const rw = .03 + s * .09, du = Math.abs(u - .7);
+    if (du < rw && hash(i, r) > .25 + du / rw * .6) col = mix(col, [240, 210, 150], (1 - du / rw) * (1 - s * .55));
+  }
+  return col;
+}
+
+function setup() {
+  DPR = Math.min(2, devicePixelRatio || 1); W = innerWidth; H = innerHeight;
+  cv.width = W * DPR; cv.height = H * DPR; cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  GAP = Math.max(10, Math.round(W / 110)); ROWH = Math.max(5, Math.round(GAP * .55));
+  TOP = Math.round(H * .13); ROWS = Math.floor(H * .74 / ROWH); BOT = TOP + ROWS * ROWH;
+  N = Math.floor(W * .8 / GAP); LEFT = (W - N * GAP) / 2;
+  wov = document.createElement('canvas'); wov.width = W * DPR; wov.height = H * DPR;
+  wctx = wov.getContext('2d'); wctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  stars = Array.from({ length: 160 }, () => ({ x: rand(0, W), y: rand(0, H), p: rand(.3, 1.5), o: rand(0, 6) }));
+  reset(performance.now());
+}
+
+function reset(now) {
+  wctx.clearRect(0, 0, W, H);
+  warps = Array.from({ length: N }, (_, i) => ({ x: LEFT + (i + .5) * GAP, amp: 0, ph: 0, drop: rand(0, .9), last: 0 }));
+  state = 'intro'; t0 = now; k = 0; c = 0; beat = 0; particles = [];
+}
+
+const freeBottom = () => (state === 'intro' || state === 'weave') ? TOP + (ROWS - k) * ROWH : TOP;
+
+// 织一格：纬线 + 交错压在上面的经线，形成布纹
+function drawCell(i, r) {
+  const col = pattern(i, r), x = LEFT + i * GAP, y = TOP + r * ROWH;
+  wctx.fillStyle = rgb(col); wctx.fillRect(x, y + .5, GAP, ROWH - 1);
+  wctx.fillStyle = 'rgba(255,255,255,.10)'; wctx.fillRect(x, y + .5, GAP, 1);
+  wctx.fillStyle = 'rgba(0,0,0,.25)'; wctx.fillRect(x, y + ROWH - 1.5, GAP, 1);
+  if ((i + r) % 2 === 0) {
+    const w = GAP * .42;
+    wctx.fillStyle = rgb(mix(col, [200, 190, 230], .25).map(v => v * .82));
+    wctx.fillRect(x + (GAP - w) / 2, y - .5, w, ROWH + 1);
+    wctx.fillStyle = 'rgba(255,255,255,.12)'; wctx.fillRect(x + (GAP - w) / 2, y, 1, ROWH);
+  }
+}
+
+function weaveStep(n, now) {
+  for (let s = 0; s < n; s++) {
+    if (k >= ROWS) { state = 'done'; t0 = now; return; }
+    const r = ROWS - 1 - k, i = k % 2 === 0 ? c : N - 1 - c;
+    drawCell(i, r);
+    if (++c >= N) { c = 0; k++; beat = 1; tock(now); }
+  }
+}
+
+// ---------- 声音：Karplus-Strong 拨弦 ----------
+function initAudio() {
+  if (AC) return;
+  AC = new AudioContext(); master = AC.createGain(); master.gain.value = .5;
+  master.connect(AC.createDynamicsCompressor()).connect(AC.destination);
+  hint.style.opacity = .3;
+}
+function freqFor(i) {
+  const len = Math.max(ROWH * 3, freeBottom() - TOP);
+  const deg = Math.min(22, Math.floor(i * 15 / N) + Math.round(5 * Math.log2((BOT - TOP) / len)));
+  return 196 * 2 ** (Math.floor(deg / 5) + PENTA[deg % 5] / 12);
+}
+function playNote(i, vel) {
+  if (!AC) return;
+  const sr = AC.sampleRate, n = Math.floor(sr * 1.8), buf = AC.createBuffer(1, n, sr), d = buf.getChannelData(0);
+  const p = Math.max(2, Math.round(sr / freqFor(i))), ring = new Float32Array(p).map(() => Math.random() * 2 - 1);
+  for (let j = 0; j < n; j++) { const a = j % p; d[j] = ring[a]; ring[a] = .498 * (ring[a] + ring[(a + 1) % p]); }
+  const src = AC.createBufferSource(), g = AC.createGain(), pan = AC.createStereoPanner();
+  src.buffer = buf; g.gain.value = .22 * (.4 + vel); pan.pan.value = (warps[i].x / W * 2 - 1) * .8;
+  src.connect(g).connect(pan).connect(master); src.start();
+}
+function tock(now) {
+  if (!AC || now - lastTock < 260) return;
+  lastTock = now;
+  const o = AC.createOscillator(), g = AC.createGain(), t = AC.currentTime;
+  o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(70, t + .12);
+  g.gain.setValueAtTime(.08, t); g.gain.exponentialRampToValueAtTime(.001, t + .15);
+  o.connect(g).connect(master); o.start(t); o.stop(t + .16);
+}
+
+// ---------- 交互 ----------
+let px = null, py = null;
+function strum(x0, y0, x1, y1) {
+  const lo = Math.min(x0, x1), hi = Math.max(x0, x1), sp = Math.hypot(x1 - x0, y1 - y0), fb = freeBottom(), now = performance.now();
+  warps.forEach((w, i) => {
+    if (w.x <= lo || w.x > hi) return;
+    const y = y0 + (y1 - y0) * (w.x - x0) / (x1 - x0);
+    if (y < TOP || y > fb || now - w.last < 70) return;
+    w.last = now; w.amp = Math.min(16, 3 + sp * .25); w.ph = 0; playNote(i, w.amp / 16);
+  });
+}
+addEventListener('pointermove', e => { if (px !== null) strum(px, py, e.clientX, e.clientY); px = e.clientX; py = e.clientY; });
+addEventListener('pointerdown', () => { initAudio(); boost = true; });
+addEventListener('pointerup', () => { boost = false; });
+addEventListener('resize', setup);
+
+// ---------- 渲染 ----------
+function drawWarps(now) {
+  const fb = freeBottom(), ip = (now - t0) / 1600;
+  for (const w of warps) {
+    const yEnd = state === 'intro' ? TOP + (fb - TOP) * (1 - (1 - clamp(ip - w.drop, 0, 1)) ** 3) : fb;
+    const len = yEnd - TOP;
+    if (len < 2) continue;
+    w.ph += .5 * clamp((BOT - TOP) / len, 1, 4); w.amp *= .975;
+    ctx.beginPath(); ctx.moveTo(w.x, TOP - 6);
+    for (let j = 1; j <= 12; j++) {
+      const s = j / 12;
+      ctx.lineTo(w.x + w.amp * Math.sin(w.ph) * Math.sin(Math.PI * s), TOP + len * s);
+    }
+    const glow = Math.min(1, w.amp / 8);
+    ctx.strokeStyle = rgb(mix([150, 140, 220], [255, 214, 150], glow), .08 + glow * .25); ctx.lineWidth = 4; ctx.stroke();
+    ctx.strokeStyle = rgb(mix([214, 206, 240], [255, 236, 190], glow), .5 + glow * .5); ctx.lineWidth = 1; ctx.stroke();
+  }
+}
+
+function drawShuttle() {
+  const r = ROWS - 1 - k, i = k % 2 === 0 ? c : N - 1 - c;
+  const sx = LEFT + (i + .5) * GAP, sy = TOP + (r + .5) * ROWH;
+  const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, 28);
+  g.addColorStop(0, 'rgba(255,236,190,.9)'); g.addColorStop(.25, 'rgba(255,200,140,.35)'); g.addColorStop(1, 'rgba(255,200,140,0)');
+  ctx.fillStyle = g; ctx.fillRect(sx - 28, sy - 28, 56, 56);
+  ctx.fillStyle = '#f3e3b5'; ctx.beginPath(); ctx.ellipse(sx, sy, 10, 2.6, 0, 0, 7); ctx.fill();
+  beat *= .85;
+  const ry = TOP + (ROWS - k) * ROWH - 2 - (1 - beat) * 10;
+  ctx.strokeStyle = 'rgba(233,223,184,.3)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(LEFT - 10, ry); ctx.lineTo(LEFT + N * GAP + 10, ry); ctx.stroke();
+}
+
+function drawBeams() {
+  for (const y of [TOP - 12, BOT + 4]) {
+    ctx.fillStyle = '#3a2c22'; ctx.fillRect(LEFT - 16, y, N * GAP + 32, 7);
+    ctx.fillStyle = '#6b5336'; ctx.fillRect(LEFT - 16, y, N * GAP + 32, 1.5);
+  }
+}
+
+function startUnravel(now) {
+  particles = [];
+  for (let r = 0; r < ROWS; r++) for (let i = 0; i < N; i++) {
+    if (Math.random() > .5) continue;
+    particles.push({ x: LEFT + (i + .5) * GAP, y: TOP + (r + .5) * ROWH, vx: 0, vy: 0, on: false, t: 0, s: Math.random(), c: rgb(pattern(i, r)) });
+  }
+  state = 'unravel'; t0 = now;
+}
+
+function drawUnravel(now) {
+  const el = (now - t0) / 1000, front = TOP + (BOT - TOP) * Math.min(1, el / 2.2);
+  if (front < BOT) ctx.drawImage(wov, 0, front * DPR, W * DPR, (H - front) * DPR, 0, front, W, H - front);
+  ctx.globalCompositeOperation = 'lighter';
+  for (const p of particles) {
+    if (!p.on) { if (p.y > front) continue; p.on = true; p.t = el; p.vx = rand(-.3, .3); p.vy = rand(-1.5, -.3); }
+    p.vy -= .02; p.vx = (p.vx + Math.sin(p.y * .015 + el * 2 + p.s * 6) * .06) * .98;
+    p.x += p.vx; p.y += p.vy;
+    const a = 1 - (el - p.t) / 2.8;
+    if (a <= 0) continue;
+    ctx.globalAlpha = a; ctx.fillStyle = p.c; ctx.fillRect(p.x, p.y, 1.8, 1.8);
+  }
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  if (el > 5.8) reset(now);
+}
+
+function frame(now) {
+  requestAnimationFrame(frame);
+  if (!W || !H) return; // 后台标签初始尺寸为 0，等 resize 后再画
+  ctx.fillStyle = '#07060d'; ctx.fillRect(0, 0, W, H);
+  for (const s of stars) {
+    ctx.fillStyle = `rgba(220,215,255,${.15 + .25 * Math.sin(now * .001 * s.p + s.o) ** 2})`;
+    ctx.fillRect(s.x, s.y, 1.2, 1.2);
+  }
+  drawBeams();
+  if (state === 'intro' && now - t0 > 3300) state = 'weave';
+  if (state === 'weave') weaveStep(boost ? 18 : 3, now);
+  if (state === 'done' && now - t0 > 4500) startUnravel(now);
+  drawWarps(now);
+  if (state === 'unravel') drawUnravel(now);
+  else ctx.drawImage(wov, 0, 0, W, H);
+  if (state === 'weave') drawShuttle();
+  if (state === 'done') {
+    const x = LEFT - 200 + (N * GAP + 400) * (((now - t0) / 2600) % 1);
+    const g = ctx.createLinearGradient(x - 120, 0, x + 120, 0);
+    g.addColorStop(0, 'rgba(255,240,210,0)'); g.addColorStop(.5, 'rgba(255,240,210,.14)'); g.addColorStop(1, 'rgba(255,240,210,0)');
+    ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = g;
+    ctx.fillRect(LEFT, TOP, N * GAP, ROWS * ROWH); ctx.globalCompositeOperation = 'source-over';
+  }
+}
+
+setup();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
