@@ -76,5 +76,11 @@ addEventListener('pointermove', e => {
   env.mouse.last = performance.now();
 });
 resize();
+// ?preview：首页悬停预览用，静音直接从“化鹤”一幕开始
+if (new URLSearchParams(location.search).has('preview')) {
+  document.getElementById('intro').remove();
+  started = true;
+  dir.seek(dir.starts[2] + 8);
+}
 requestAnimationFrame(frame);
 window.__ink = { dir, env };

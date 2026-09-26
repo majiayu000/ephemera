@@ -4,69 +4,128 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Ephemera · 浮光</title>
+<meta name="description" content="五件纯代码生成的浏览器动画：没有图片，没有音频文件，每一帧都在打开的瞬间现场算出来。">
 <style>
-html,body{margin:0;min-height:100%;background:#08070c;color:#e8e2d6;font-family:"PingFang SC",sans-serif}
-main{max-width:1080px;margin:0 auto;padding:64px 24px}
-h1{font-weight:300;letter-spacing:.5em;margin:0 0 8px}
-.sub{opacity:.5;letter-spacing:.2em;font-size:13px;margin-bottom:48px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px}
-a.card{display:block;text-decoration:none;color:inherit;border-radius:14px;overflow:hidden;background:#13111a;border:1px solid #221f2c;transition:transform .25s,border-color .25s}
-a.card:hover{transform:translateY(-4px);border-color:#4a4460}
-.cover{height:150px;display:flex;align-items:center;justify-content:center;font-size:30px;letter-spacing:.4em;text-indent:.4em}
-.body{padding:16px 18px 20px}
-.body h2{margin:0 0 8px;font-size:17px;font-weight:500;letter-spacing:.15em}
-.body p{margin:0 0 12px;font-size:13px;line-height:1.7;opacity:.72}
-.tags span{display:inline-block;font-size:11px;padding:2px 8px;margin:0 6px 6px 0;border-radius:99px;background:#221f2c;opacity:.85}
-.note{font-size:12px;color:#d9a94f;margin-top:8px}
+:root{--bg:#07060a;--fg:#ece6da;--dim:rgba(236,230,218,.52);--line:rgba(236,230,218,.1);--serif:"Didot","Bodoni 72","Songti SC",serif;--kai:"STKaiti","Kaiti SC","KaiTi",serif;--sans:"PingFang SC","Helvetica Neue",sans-serif}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+::selection{background:#b62420;color:#fff}
+a{color:inherit;text-decoration:none}
+#motes{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+main{position:relative;z-index:1}
+
+.hero{position:relative;min-height:100vh;display:grid;grid-template-columns:1fr auto;align-items:end;padding:0 6vw 12vh;gap:4vw}
+.eyebrow{font-size:11px;letter-spacing:.42em;color:var(--dim);margin-bottom:28px;text-transform:uppercase}
+h1{font-family:var(--serif);font-weight:300;font-size:clamp(72px,15vw,230px);line-height:.86;margin:0;letter-spacing:-.02em}
+h1 em{font-style:italic;opacity:.55}
+.lede{max-width:560px;margin:36px 0 0;font-size:15px;line-height:2;color:var(--dim)}
+.lede b{color:var(--fg);font-weight:400}
+.mark{display:flex;flex-direction:column;align-items:center;gap:18px;padding-bottom:8px}
+.mark .zh{font-family:var(--kai);font-size:clamp(48px,6vw,84px);writing-mode:vertical-rl;letter-spacing:.2em;line-height:1}
+.seal{width:34px;height:34px;background:#b62420;color:#f1e9da;font-family:var(--kai);font-size:22px;display:flex;align-items:center;justify-content:center;border-radius:2px}
+.cue{position:absolute;left:6vw;bottom:5vh;font-size:11px;letter-spacing:.4em;color:var(--dim);display:flex;align-items:center;gap:14px}
+.cue i{display:block;width:60px;height:1px;background:var(--dim);transform-origin:left;animation:cue 2.4s ease-in-out infinite}
+@keyframes cue{0%{transform:scaleX(0)}50%{transform:scaleX(1)}100%{transform:scaleX(0);transform-origin:right}}
+
+.works{padding:14vh 6vw 10vh}
+.head{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:22px}
+.head h2{margin:0;font-family:var(--serif);font-weight:300;font-size:clamp(34px,4vw,56px)}
+.head span{font-size:12px;letter-spacing:.35em;color:var(--dim)}
+.work{--c:#fff;position:relative;display:grid;grid-template-columns:70px minmax(220px,1.1fr) 1.5fr auto 40px;align-items:center;gap:3vw;padding:38px 8px;border-bottom:1px solid var(--line);opacity:0;transform:translateY(24px);transition:opacity .9s,transform .9s,background .5s}
+.work.in{opacity:1;transform:none}
+.work::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,var(--c),transparent 70%);opacity:0;transition:opacity .5s;pointer-events:none}
+.work:hover::before{opacity:.09}
+.num{font-family:var(--serif);font-size:15px;color:var(--dim);transition:color .4s}
+.work:hover .num{color:var(--c)}
+.t{transition:transform .5s cubic-bezier(.2,.7,.2,1)}
+.work:hover .t{transform:translateX(14px)}
+.t .zh{font-family:var(--kai);font-size:clamp(30px,3.2vw,46px);letter-spacing:.12em;display:block}
+.t .en{font-family:var(--serif);font-style:italic;font-size:15px;color:var(--dim);margin-top:6px;display:block}
+.desc{font-size:14px;line-height:1.9;color:var(--dim);margin:0}
+.tags{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;max-width:220px}
+.tags span{font-size:11px;letter-spacing:.08em;padding:4px 10px;border:1px solid var(--line);border-radius:99px;color:var(--dim);transition:border-color .4s,color .4s}
+.work:hover .tags span{border-color:var(--c);color:var(--fg)}
+.arrow{font-size:22px;color:var(--dim);transition:transform .5s,color .4s}
+.work:hover .arrow{transform:translateX(6px) rotate(-45deg);color:var(--c)}
+
+#pv{position:fixed;left:0;top:0;width:440px;aspect-ratio:16/10;border-radius:14px;overflow:hidden;z-index:5;pointer-events:none;opacity:0;transform:scale(.9);transition:opacity .35s,transform .45s cubic-bezier(.2,.7,.2,1);background:#000;border:1px solid rgba(255,255,255,.14);box-shadow:0 40px 90px rgba(0,0,0,.65)}
+#pv.on{opacity:1;transform:scale(1)}
+#pv iframe{width:1280px;height:800px;border:0;transform:scale(.34375);transform-origin:0 0}
+#pv .live{position:absolute;left:14px;bottom:12px;font-size:10px;letter-spacing:.3em;color:#fff;display:flex;align-items:center;gap:8px;text-shadow:0 1px 6px #000}
+#pv .live::before{content:"";width:6px;height:6px;border-radius:50%;background:#ff3b3b;animation:blink 1.4s infinite}
+@keyframes blink{50%{opacity:.2}}
+
+footer{padding:14vh 6vw 8vh;display:flex;justify-content:space-between;align-items:flex-end;gap:40px;flex-wrap:wrap}
+footer p{font-family:var(--kai);font-size:clamp(26px,3.2vw,44px);margin:0;letter-spacing:.1em;line-height:1.5}
+footer nav{display:flex;gap:28px;font-size:12px;letter-spacing:.3em;color:var(--dim)}
+footer nav a:hover{color:var(--fg)}
+
+@media (max-width:860px){
+  .hero{grid-template-columns:1fr}.mark{flex-direction:row;align-items:center}.mark .zh{writing-mode:horizontal-tb}
+  .work{grid-template-columns:44px 1fr 24px;gap:14px}.desc,.tags{grid-column:2/3}.tags{justify-content:flex-start}.arrow{grid-row:1}
+}
+@media (hover:none){#pv{display:none}}
 </style>
 </head>
 <body>
+<canvas id="motes"></canvas>
 <main>
-  <h1>EPHEMERA</h1>
-  <div class="sub">浮光 · 代码动画集 · 无素材文件 · 每一帧都是现场算出来的</div>
-  <div class="grid">
-    <a class="card" href="ink-drop/index.html">
-      <div class="cover" style="background:#efe8d8;color:#1a191c;font-family:'STKaiti','Kaiti SC',serif">一滴墨</div>
-      <div class="body">
-        <h2>一滴墨</h2>
-        <p>约三分钟的六幕水墨短片：墨滴化鱼，鱼跃成鹤，鹤散为云，云落成雨，雨汇成江，最后写成一首诗回到砚台。</p>
-        <div class="tags"><span>Canvas 2D</span><span>Web Audio</span><span>ES 模块</span></div>
-        <div class="note">需要本地 http 服务才能打开，见 README</div>
-      </div>
+  <section class="hero">
+    <div>
+      <div class="eyebrow">Generative pieces · Code only · 2026</div>
+      <h1>Ephem<em>e</em>ra</h1>
+      <p class="lede">五件纯代码生成的浏览器动画。<b>没有一张图片，没有一个音频文件</b>——画面、光影和声音，都在你打开页面的那一刻现场算出来；关掉它，就消失了。</p>
+    </div>
+    <div class="mark"><span class="zh">浮光</span><span class="seal">浮</span></div>
+    <a class="cue" href="#works"><i></i>向下 · 五件作品</a>
+  </section>
+
+  <section class="works" id="works">
+    <div class="head"><h2>Works</h2><span>05 PIECES</span></div>
+    <a class="work" href="ink-drop/index.html" data-preview="ink-drop/index.html?preview" style="--c:#d8c9a6">
+      <span class="num">01</span>
+      <span class="t"><span class="zh">一滴墨</span><span class="en">Ink Drop</span></span>
+      <p class="desc">三分钟、六幕的水墨短片：墨滴化鱼，鱼跃成鹤，鹤散为云，云落成雨，雨汇成江，最后写成一首诗，回到砚台。</p>
+      <span class="tags"><span>Canvas 2D</span><span>Web Audio</span><span>叙事</span></span>
+      <span class="arrow">→</span>
     </a>
-    <a class="card" href="moon-loom.html">
-      <div class="cover" style="background:linear-gradient(#0a0926,#3e2468 60%,#1e2256);color:#f3e3b5">月下织机</div>
-      <div class="body">
-        <h2>月下织机</h2>
-        <p>梭子一行行织出月下海面，织完拆散成星尘。划过经线可以拨弦，还没织的那段越短，音越高。</p>
-        <div class="tags"><span>Canvas 2D</span><span>Karplus-Strong</span></div>
-      </div>
+    <a class="work" href="black-hole.html" data-preview="black-hole.html" style="--c:#f0a860">
+      <span class="num">02</span>
+      <span class="t"><span class="zh">事件视界</span><span class="en">Event Horizon</span></span>
+      <p class="desc">光线追踪的黑洞。吸积盘被引力弯折到黑洞上下方，朝向你的一侧更亮、偏蓝。拖动环绕，滚轮缩放。</p>
+      <span class="tags"><span>WebGL2</span><span>光线步进</span></span>
+      <span class="arrow">→</span>
     </a>
-    <a class="card" href="black-hole.html">
-      <div class="cover" style="background:radial-gradient(circle,#000 22%,#f0a860 30%,#3a1d10 46%,#05040a 70%);color:#fff">事件视界</div>
-      <div class="body">
-        <h2>事件视界</h2>
-        <p>光线追踪的黑洞：吸积盘被引力弯折到黑洞上下方，朝向你的一侧更亮偏蓝。拖动环绕，滚轮缩放。</p>
-        <div class="tags"><span>WebGL2</span><span>光线步进</span></div>
-      </div>
+    <a class="work" href="stardust.html" data-preview="stardust.html" style="--c:#8f84ff">
+      <span class="num">03</span>
+      <span class="t"><span class="zh">百万星尘</span><span class="en">Stardust</span></span>
+      <p class="desc">1,048,576 颗粒子在星系、球体、三叶结和文字之间旋涡式聚散。点击变形，鼠标靠近会推开粒子。</p>
+      <span class="tags"><span>WebGL2</span><span>GPU 粒子</span></span>
+      <span class="arrow">→</span>
     </a>
-    <a class="card" href="stardust.html">
-      <div class="cover" style="background:radial-gradient(ellipse at center,#fff3d0 0%,#5a4bd8 18%,#1b6f8a 38%,#050510 65%);color:#fff">百万星尘</div>
-      <div class="body">
-        <h2>百万星尘</h2>
-        <p>1,048,576 颗粒子在星系、球体、三叶结和文字之间旋涡式变形。点击切换形状，鼠标靠近会推开粒子。</p>
-        <div class="tags"><span>WebGL2</span><span>GPU 粒子</span></div>
-      </div>
+    <a class="work" href="neon-drive.html" data-preview="neon-drive.html?preview" style="--c:#ff4fc8">
+      <span class="num">04</span>
+      <span class="t"><span class="zh">霓虹夜驰</span><span class="en">Neon Drive</span></span>
+      <p class="desc">合成器浪潮的落日与霓虹网格。配乐由代码实时编曲，鼓组进入后，画面随每一下鼓点闪光、震动、色散。</p>
+      <span class="tags"><span>WebGL2</span><span>音序器</span></span>
+      <span class="arrow">→</span>
     </a>
-    <a class="card" href="neon-drive.html">
-      <div class="cover" style="background:linear-gradient(#050010,#d8207a 55%,#0a0015 56%);color:#8fe9ff;text-shadow:0 0 12px #29c8ff">霓虹夜驰</div>
-      <div class="body">
-        <h2>霓虹夜驰</h2>
-        <p>合成器浪潮风格的落日与霓虹网格，配乐实时编曲，鼓组进入时画面随鼓点闪光、震动、色散。</p>
-        <div class="tags"><span>WebGL2</span><span>Web Audio 音序器</span></div>
-      </div>
+    <a class="work" href="moon-loom.html" data-preview="moon-loom.html" style="--c:#e9dfb8">
+      <span class="num">05</span>
+      <span class="t"><span class="zh">月下织机</span><span class="en">Moon Loom</span></span>
+      <p class="desc">梭子一行行织出月下海面，织完拆散成星尘。划过经线可以拨弦，还没织的那段越短，音就越高。</p>
+      <span class="tags"><span>Canvas 2D</span><span>拨弦合成</span></span>
+      <span class="arrow">→</span>
     </a>
-  </div>
+  </section>
+
+  <footer>
+    <p>每一帧，<br>都是现场算出来的。</p>
+    <nav><a href="https://github.com/majiayu000/ephemera">GITHUB</a><a href="LICENSE">MIT</a></nav>
+  </footer>
 </main>
+<div id="pv"><iframe title="预览" tabindex="-1"></iframe><span class="live">LIVE</span></div>
+<script src="home.js"></script>
 </body>
 </html>

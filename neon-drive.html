@@ -65,12 +65,22 @@ const cv = document.getElementById('c'), go = document.getElementById('go');
 const gl = glkit.context(cv, .8);
 const prog = glkit.program(gl, glkit.FULLSCREEN_VS, FS);
 const U = glkit.uniforms(gl, prog, ['R', 'T', 'B', 'E', 'H', 'F']);
+// ?preview：首页悬停预览用，静音、按 110 BPM 模拟鼓点，直接进入高潮段
+const preview = new URLSearchParams(location.search).has('preview');
 let started = false;
 go.addEventListener('click', () => { Music.start(); started = true; go.remove(); });
+if (preview) go.remove();
+
+function idle(t) {
+  const beatLen = 60 / 110;
+  return preview
+    ? { t, bar: Math.floor(t / (beatLen * 4)), beat: Math.exp(-(t % beatLen) * 7), full: true, drop: 0 }
+    : { t, bar: 0, beat: 0, full: false, drop: 0 };
+}
 
 function frame(ms) {
   requestAnimationFrame(frame);
-  const s = started ? Music.state() : { t: ms / 1000, bar: 0, beat: 0, full: false, drop: 0 };
+  const s = started ? Music.state() : idle(ms / 1000);
   gl.uniform2f(U.R, cv.width, cv.height);
   gl.uniform1f(U.T, s.t);
   gl.uniform1f(U.B, s.beat);
