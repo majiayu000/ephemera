@@ -3,6 +3,8 @@
 [![CI](https://github.com/majiayu000/ephemera/actions/workflows/ci.yml/badge.svg)](https://github.com/majiayu000/ephemera/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+[Open the online gallery](https://majiayu000.github.io/ephemera/). The social preview is a screenshot of the public gallery; animation and sound remain generated at runtime.
+
 [中文说明](README.zh-CN.md)
 
 A collection of browser animations generated entirely by code. No images, no audio files: every frame is drawn live with Canvas / WebGL2 and every sound is synthesized with the Web Audio API. Close the tab and it is gone; open it again and it is computed anew.
