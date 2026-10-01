@@ -133,6 +133,14 @@ footer nav a:hover{color:var(--fg)}
     </a>
   </section>
 
+  <section class="works" id="running-notes" aria-labelledby="running-notes-title">
+    <div class="head"><h2 id="running-notes-title">运行与源码</h2><span>CANVAS / WEBGL2 / WEB AUDIO</span></div>
+    <p class="lede">Ephemera · 浮光是五件浏览器代码作品。想拆解画面和声音，可以从每件作品的入口文件开始：<a href="https://github.com/majiayu000/ephemera/tree/main/ink-drop">一滴墨模块</a>、<a href="https://github.com/majiayu000/ephemera/blob/main/black-hole.html">黑洞光线步进</a>、<a href="https://github.com/majiayu000/ephemera/blob/main/stardust.html">GPU 星尘</a>、<a href="https://github.com/majiayu000/ephemera/blob/main/neon-drive-music.js">霓虹夜驰音序器</a>与<a href="https://github.com/majiayu000/ephemera/blob/main/moon-loom.html">月下织机拨弦</a>。</p>
+    <details class="lede"><summary>为什么画面有了，声音却没响？</summary><p>有声作品需要先在页面上点击，浏览器才允许启动 Web Audio。霓虹夜驰点击开始；月下织机划过经线拨弦。再检查页面和系统音量。声音由代码合成，不需要下载音频文件。</p></details>
+    <details class="lede"><summary>为什么直接双击一滴墨会失败？</summary><p>一滴墨使用 ES modules，需要 HTTP 服务。克隆仓库后运行 <code>python3 -m http.server 8000</code>，打开 <code>http://localhost:8000/</code>；也可直接从本画廊打开在线作品。其余四件作品可直接打开 HTML。</p></details>
+    <details class="lede"><summary>WebGL2 作品打不开时怎么办？</summary><p>事件视界、百万星尘和霓虹夜驰使用 WebGL2；查看页面是否提示不支持 WebGL2，检查浏览器与硬件加速设置。Canvas 2D 的<a href="ink-drop/index.html">一滴墨</a>和<a href="moon-loom.html">月下织机</a>使用不同绘图路径，可以分别检查。作品错误请向<a href="https://github.com/majiayu000/ephemera/issues">项目 Issues</a>提供作品名、浏览器版本和错误文字。</p></details>
+    <p class="lede">源码采用 <a href="LICENSE">MIT 许可</a>；运行与贡献步骤见<a href="https://github.com/majiayu000/ephemera/blob/main/CONTRIBUTING.md">贡献说明</a>。画廊分享图是页面截图，作品本身的画面与声音仍在浏览器中实时生成。</p>
+  </section>
   <footer>
     <p>每一帧，<br>都是现场算出来的。</p>
     <nav><a href="https://github.com/majiayu000/ephemera">GITHUB</a><a href="LICENSE">MIT</a></nav>

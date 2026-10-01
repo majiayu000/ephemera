@@ -26,6 +26,8 @@ python3 -m http.server 8000
 
 有声音的作品需要先点击一次页面，浏览器才允许播放。
 
+在线画廊的[运行与源码](https://majiayu000.github.io/ephemera/#running-notes)说明音频启动、一滴墨的 HTTP 要求与 WebGL2 检查，并提供逐件源码入口。问题可在[项目 Issues](https://github.com/majiayu000/ephemera/issues)附作品名、浏览器版本与错误文字反馈。
+
 ## 目录
 
 ```

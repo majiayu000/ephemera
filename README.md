@@ -33,6 +33,8 @@ Then open http://localhost:8000/ — `index.html` is the gallery.
 
 Pieces with sound need one click on the page before the browser allows audio.
 
+The gallery's [running notes](https://majiayu000.github.io/ephemera/#running-notes) explain audio activation, Ink Drop's HTTP requirement and WebGL2 checks, with direct source links for each piece. For a bug report, include the piece, browser version and error message in [Issues](https://github.com/majiayu000/ephemera/issues).
+
 ## Layout
 
 ```
